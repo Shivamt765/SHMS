@@ -1,0 +1,113 @@
+body {
+    font-family: Arial, sans-serif;
+    background: #f2f2f2;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+  }
+  
+  .container {
+    background: white;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    width: 300px;
+  }
+  
+  h1 {
+    text-align: center;
+    color: #333;
+  }
+  
+  form {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  input, select {
+    margin-bottom: 15px;
+    padding: 10px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+  }
+  
+  button {
+    background: #007BFF;
+    color: white;
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  
+  button:hover {
+    background: #0056b3;
+  }
+  
+  .hidden {
+    display: none;
+  }
+  
+  #confirmation {
+    margin-top: 20px;
+    color: green;
+    text-align: center;
+  }
+
+  
+  .queue-tracker {
+    margin-top: 2rem;
+    padding: 1rem;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    background: #f9f9f9;
+  }
+  
+  .queue-tracker table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1rem;
+  }
+  
+  .queue-tracker th, .queue-tracker td {
+    padding: 0.8rem;
+    text-align: center;
+    border-bottom: 1px solid #ddd;
+  }
+  
+  .queue-tracker tbody tr.current {
+    background-color: #e0f7fa;
+    font-weight: bold;
+  }
+  
+  .queue-tracker tbody tr.blur td:first-child {
+    filter: blur(0px);
+  }
+  
+  .queue-tracker tbody tr.blur td:nth-child(2) {
+    filter: blur(6px);
+  }
+  
+  .queue-tracker .info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  #etaFromLocation {
+    font-weight: bold;
+    color: green;
+  }
+  
+  #getDirectionsBtn {
+    padding: 0.6rem 1.2rem;
+    background: #007BFF;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+
+  
+  
