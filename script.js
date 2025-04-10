@@ -15,6 +15,7 @@ document.getElementById('bookingForm').addEventListener('submit', async function
     doctor,
     date,
     timestamp: Date.now(),
+    paymentStatus: "unpaid",
     status: 'waiting'
   };
 
@@ -28,104 +29,111 @@ document.getElementById('bookingForm').addEventListener('submit', async function
   document.getElementById('bookingForm').reset();
 });
 
-let refreshInterval;
-
-async function trackQueue(auto = false) {
-  const userPhone = document.getElementById('trackPhone').value;
+function trackQueue(auto = false) {
+  const userPhone = document.getElementById('trackPhone')?.value;
   if (!auto && !userPhone) {
     alert('Please enter your phone number');
     return;
   }
 
   const db = window.firebaseDB;
-  const snapshot = await window.firebaseGet(window.firebaseChild(window.firebaseRef(db), 'appointments'));
+  window.firebaseGet(window.firebaseChild(window.firebaseRef(db), 'appointments'))
+    .then(snapshot => {
+      if (!snapshot.exists()) {
+        alert('No appointments found.');
+        return;
+      }
 
-  if (!snapshot.exists()) {
-    alert('No appointments found.');
-    return;
-  }
+      const appointments = [];
+      snapshot.forEach(child => {
+        appointments.push({ id: child.key, ...child.val() });
+      });
 
-  const appointments = [];
-  snapshot.forEach(child => {
-    appointments.push({ id: child.key, ...child.val() });
-  });
+      appointments.sort((a, b) => a.timestamp - b.timestamp);
+      const userIndex = appointments.findIndex(a => a.phone === userPhone);
+      if (userIndex === -1) {
+        alert('Phone number not found in queue.');
+        return;
+      }
 
-  appointments.sort((a, b) => a.timestamp - b.timestamp);
-  const userIndex = appointments.findIndex(a => a.phone === userPhone);
-  if (userIndex === -1) {
-    alert('Phone number not found in queue.');
-    return;
-  }
+      // Calculate avg consultation time
+      let defaultConsultTime = 5 * 60 * 1000;
+      let appointedTimes = appointments
+        .filter(a => a.status === 'appointed' && a.startTime && a.endTime)
+        .map(a => a.endTime - a.startTime);
 
-  // Calculate avg consultation time
-  let defaultConsultTime = 5 * 60 * 1000;
-  let appointedTimes = [];
+      let avgTime = appointedTimes.length > 0
+        ? appointedTimes.reduce((a, b) => a + b, 0) / appointedTimes.length
+        : defaultConsultTime;
 
-  for (let i = 0; i < appointments.length; i++) {
-    const appt = appointments[i];
-    if (appt.status === 'appointed' && appt.startTime && appt.endTime) {
-      appointedTimes.push(appt.endTime - appt.startTime);
-    }
-  }
+      const tbody = document.querySelector('#queueTable tbody');
+      if (!tbody) return;
+      tbody.innerHTML = '';
 
-  let avgTime = appointedTimes.length > 0
-    ? appointedTimes.reduce((a, b) => a + b, 0) / appointedTimes.length
-    : defaultConsultTime;
+      const start = Math.max(0, userIndex - 10);
+      const end = Math.min(appointments.length, userIndex + 11);
 
-  const tbody = document.querySelector('#queueTable tbody');
-  tbody.innerHTML = '';
+      for (let i = start; i < end; i++) {
+        const a = appointments[i];
+        const isUser = i === userIndex;
+        const tr = document.createElement('tr');
 
-  const start = Math.max(0, userIndex - 10);
-  const end = Math.min(appointments.length, userIndex + 11);
+        const nameCell = `<td class="${!isUser ? 'blurred-text' : ''}">${a.name}</td>`;
+        const estTime = Math.ceil(avgTime * i / 60000);
 
-  for (let i = start; i < end; i++) {
-    const a = appointments[i];
-    const isUser = i === userIndex;
-    const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${i + 1}</td>
+          ${nameCell}
+          <td>${a.doctor}</td>
+          <td>~${estTime} mins</td>
+        `;
 
-    const nameCell = `<td class="${!isUser ? 'blurred-text' : ''}">${a.name}</td>`;
-    const estTime = Math.ceil(avgTime * i / 60000);
+        if (a.status === 'appointed') {
+          tr.classList.add('appointed-row');
+        }
 
-    tr.innerHTML = `
-      <td>${i + 1}</td>
-      ${nameCell}
-      <td>${a.doctor}</td>
-      <td>~${estTime} mins</td>
-    `;
+        tbody.appendChild(tr);
+      }
 
-    if (a.status === 'appointed') {
-      tr.classList.add('appointed-row');
-    }
+      document.getElementById('queueResult')?.classList.remove('hidden');
 
-    tbody.appendChild(tr);
-  }
+      if (!auto && navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(position => {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
 
-  document.getElementById('queueResult').classList.remove('hidden');
+          const hospitalLat = 26.2755;
+          const hospitalLng = 83.9557;
 
-  if (!auto && navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(position => {
-      const lat = position.coords.latitude;
-      const lng = position.coords.longitude;
+          const distance = getDistanceFromLatLonInKm(lat, lng, hospitalLat, hospitalLng);
+          const travelTime = Math.round((distance / 30) * 60);
 
-      const hospitalLat = 26.2755;
-      const hospitalLng = 83.9557;
+          document.getElementById('etaFromLocation').textContent = `~${travelTime} mins`;
 
-      const distance = getDistanceFromLatLonInKm(lat, lng, hospitalLat, hospitalLng);
-      const travelTime = Math.round((distance / 30) * 60);
+          const mapsURL = `https://www.google.com/maps/dir/?api=1&destination=${hospitalLat},${hospitalLng}`;
+          document.getElementById('getDirectionsBtn').onclick = () => {
+            window.open(mapsURL, '_blank');
+          };
+        });
+      }
 
-      document.getElementById('etaFromLocation').textContent = `~${travelTime} mins`;
-
-      const mapsURL = `https://www.google.com/maps/dir/?api=1&destination=${hospitalLat},${hospitalLng}`;
-      document.getElementById('getDirectionsBtn').onclick = () => {
-        window.open(mapsURL, '_blank');
-      };
+      // Manage refresh interval safely using a static variable on the function
+      if (!trackQueue.refreshInterval) {
+        trackQueue.refreshInterval = setInterval(() => trackQueue(true), 10000);
+      }
+    })
+    .catch(error => {
+      console.error("Error loading queue:", error);
     });
-  }
-
-  if (!refreshInterval) {
-    refreshInterval = setInterval(() => trackQueue(true), 10000);
-  }
 }
+
+// Reset on unload if needed
+window.addEventListener("beforeunload", () => {
+  if (trackQueue.refreshInterval) {
+    clearInterval(trackQueue.refreshInterval);
+  }
+});
+
 
 function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
   const R = 6371;

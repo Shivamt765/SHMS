@@ -4,6 +4,13 @@
   <meta charset="UTF-8">
   <title>SmartQueue Health - Queue Tracker</title>
   <link rel="stylesheet" href="style.css">
+  
+  <!-- Google Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet" />
+  
+  <!-- CSS Reset -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/meyer-reset/2.0/reset.min.css" rel="stylesheet" />
+
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
     import {
@@ -33,10 +40,167 @@
   </script>
 
   <style>
-    .appointed-row {
-      text-decoration: line-through;
-      opacity: 0.6;
+   .strike-animate td {
+  position: relative;
+  overflow: hidden;
+  color: #bbb;
+}
+
+.strike-animate td::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 0;
+  height: 2px;
+  background: red;
+  animation: strikeLine 1s ease forwards;
+}
+
+@keyframes strikeLine {
+  to {
+    width: 100%;
+  }
+}
+    * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    font-family: 'Outfit', sans-serif;
+    background: url('https://images.unsplash.com/photo-1588776814546-ec7e5caef7f6?ixlib=rb-4.0.3&auto=format&fit=crop&w=1950&q=80') no-repeat center center fixed;
+    background-size: cover;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+  }
+
+  .container {
+    background: rgba(255, 255, 255, 0.75);
+    border-radius: 16px;
+    padding: 40px;
+    width: 100%;
+    max-width: 800px;
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.2);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: #1a1a1a;
+    text-align: center;
+  }
+
+  h1 {
+    font-size: 2.5rem;
+    color: #1a1a1a;
+    margin-bottom: 10px;
+  }
+
+  p {
+    font-size: 1.1rem;
+    color: #333;
+    margin-bottom: 20px;
+  }
+
+  input,
+  button {
+    padding: 14px;
+    margin: 10px 0;
+    width: 100%;
+    border-radius: 12px;
+    border: none;
+    font-size: 1rem;
+    outline: none;
+  }
+
+  input {
+    background: rgba(255, 255, 255, 0.9);
+    color: #000;
+  }
+
+  input::placeholder {
+    color: #555;
+  }
+
+  button {
+    background: rgba(0, 123, 255, 0.9);
+    color: #fff;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+
+  button:hover {
+    background: rgba(0, 105, 217, 1);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  th,
+  td {
+    padding: 15px;
+    border-bottom: 1px solid #ccc;
+    text-align: center;
+    color: #222;
+  }
+
+  th {
+    background-color: rgba(240, 240, 240, 0.9);
+  }
+
+  .blurred-text {
+    filter: blur(4px);
+  }
+
+  .appointed-row {
+    text-decoration: line-through;
+    opacity: 0.6;
+  }
+
+  .hidden {
+    display: none;
+  }
+
+  #getDirectionsBtn {
+    background: rgba(0, 200, 83, 0.9);
+    color: #fff;
+    margin-top: 15px;
+  }
+
+  #getDirectionsBtn:hover {
+    background: rgba(0, 180, 73, 1);
+  }
+
+  #etaFromLocation {
+    font-weight: bold;
+    font-size: 1.2rem;
+    color: #000;
+    margin-top: 15px;
+  }
+
+  @media (max-width: 600px) {
+    h1 {
+      font-size: 2rem;
     }
+
+    .container {
+      padding: 20px;
+    }
+
+    th,
+    td {
+      font-size: 0.9rem;
+    }
+  }
   </style>
 </head>
 <body>
