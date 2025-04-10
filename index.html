@@ -4,9 +4,7 @@
   <meta charset="UTF-8">
   <title>SmartQueue Health - Book Appointment</title>
   <link rel="stylesheet" href="style.css">
-  <!-- Firebase SDK -->
   <script type="module">
-    // Import Firebase
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
     import {
       getDatabase,
@@ -15,7 +13,7 @@
       get,
       child
     } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
-  
+
     const firebaseConfig = {
       apiKey: "AIzaSyDfWDsgmlHNNxL2g9I2vFUr5b6y5b7F6OA",
       authDomain: "smartqueue-c729f.firebaseapp.com",
@@ -25,19 +23,23 @@
       messagingSenderId: "908324761850",
       appId: "1:908324761850:web:3b1e1eb86eec9c41ccd943"
     };
-  
+
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
-  
-    // Export for use in script.js
+
     window.firebaseDB = db;
     window.firebaseRef = ref;
     window.firebasePush = push;
     window.firebaseGet = get;
     window.firebaseChild = child;
   </script>
-  
-  
+
+  <style>
+    .appointed-row {
+      text-decoration: line-through;
+      opacity: 0.6;
+    }
+  </style>
 </head>
 <body>
   <div class="container">
@@ -56,35 +58,31 @@
       <button type="submit">Book Appointment</button>
     </form>
     <div id="confirmation" class="hidden"></div>
-    <hr>
-        <h2>📊 Live Queue Tracker</h2>
-        <input type="text" id="trackPhone" placeholder="Enter your phone to check position" />
-        <button onclick="trackQueue()">Track My Position</button>
+    <!-- <hr>
+    <h2>📊 Live Queue Tracker</h2>
+    <input type="text" id="trackPhone" placeholder="Enter your phone to check position" />
+    <button onclick="trackQueue()">Track My Position</button>
+  </div>
 
-        <div id="queueResult" class="queue-tracker hidden">
-            <h3>Your Queue Status</h3>
-            <table id="queueTable">
-              <thead>
-                <tr>
-                  <th>Position</th>
-                  <th>Patient Name</th>
-                  <th>Doctor</th>
-                  <th>Estimated Time</th>
-                </tr>
-              </thead>
-              <tbody></tbody>
-            </table>
-          
-            <div class="info">
-              <p><strong>Estimated time from your location:</strong> <span id="etaFromLocation">Calculating...</span></p>
-              <button id="getDirectionsBtn">🧭 Get Directions</button>
-            </div>
-          </div>
-          <div id="etaFromLocation" style="margin-top: 1rem; font-weight: bold;"></div>
-<button id="getDirectionsBtn" style="margin-top: 0.5rem;">🗺️ Get Directions to Hospital</button>
+  <div id="queueResult" class="queue-tracker hidden">
+    <h3>Your Queue Status</h3>
+    <table id="queueTable">
+      <thead>
+        <tr>
+          <th>Position</th>
+          <th>Patient Name</th>
+          <th>Doctor</th>
+          <th>Estimated Time</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
 
-</div>
-
+    <div class="info">
+      <p><strong>Estimated time from your location:</strong> <span id="etaFromLocation">Calculating...</span></p>
+      <button id="getDirectionsBtn">🧭 Get Directions</button>
+    </div>
+  </div> -->
 
   <script src="script.js"></script>
 </body>

@@ -2,20 +2,68 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Track Your Visit | Smart OPD Tracker</title>
-  <link rel="stylesheet" href="styles.css">
+  <title>SmartQueue Health - Queue Tracker</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+    import {
+      getDatabase,
+      ref,
+      get,
+      child
+    } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDfWDsgmlHNNxL2g9I2vFUr5b6y5b7F6OA",
+      authDomain: "smartqueue-c729f.firebaseapp.com",
+      databaseURL: "https://smartqueue-c729f-default-rtdb.firebaseio.com",
+      projectId: "smartqueue-c729f",
+      storageBucket: "smartqueue-c729f.appspot.com",
+      messagingSenderId: "908324761850",
+      appId: "1:908324761850:web:3b1e1eb86eec9c41ccd943"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    window.firebaseDB = db;
+    window.firebaseRef = ref;
+    window.firebaseGet = get;
+    window.firebaseChild = child;
+  </script>
+
+  <style>
+    .appointed-row {
+      text-decoration: line-through;
+      opacity: 0.6;
+    }
+  </style>
 </head>
 <body>
   <div class="container">
-    <h1>Your Visit Status</h1>
-    <div id="tracker">
-      <p>Queue Number: <span id="queueNum"></span></p>
-      <p>People Before You: <span id="before"></span></p>
-      <p>Expected Time at Hospital: <span id="eta"></span></p>
-      <p>Leave by: <span id="leaveTime"></span></p>
+    <h1>SmartQueue Health</h1>
+    <p>Track your queue</p>
+
+    <input type="tel" id="trackPhone" placeholder="Enter your phone number" required />
+    <button onclick="trackQueue()">Track Queue</button>
+
+    <div id="queueResult" class="hidden">
+      <table id="queueTable">
+        <thead>
+          <tr>
+            <th>Position</th>
+            <th>Name</th>
+            <th>Doctor</th>
+            <th>Estimated Time</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <p>ETA from your location: <span id="etaFromLocation">-</span></p>
+      <button id="getDirectionsBtn">Get Directions</button>
     </div>
   </div>
-  <script src="tracker.js"></script>
+
+  <script src="script.js"></script>
 </body>
 </html>

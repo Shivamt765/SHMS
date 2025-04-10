@@ -1,127 +1,144 @@
-document.getElementById('bookingForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-  
-    const name = document.getElementById('name').value.trim();
-    const phone = document.getElementById('phone').value.trim();
-    const doctor = document.getElementById('doctor').value;
-    const date = document.getElementById('date').value;
-  
-    const appointment = {
-      name,
-      phone,
-      doctor,
-      date,
-      timestamp: new Date().toISOString()
-    };
-  
-    const db = window.firebaseDB;
-    const ref = window.firebaseRef;
-    const push = window.firebasePush;
-  
-    push(ref(db, 'appointments'), appointment)
-      .then(() => {
-        document.getElementById('confirmation').classList.remove('hidden');
-        document.getElementById('confirmation').innerText = "Appointment booked successfully!";
-        document.getElementById('bookingForm').reset();
-      })
-      .catch((error) => {
-        alert("Error booking appointment: " + error.message);
-      });
+document.getElementById('bookingForm').addEventListener('submit', async function (e) {
+  e.preventDefault();
+
+  const name = document.getElementById('name').value;
+  const phone = document.getElementById('phone').value;
+  const doctor = document.getElementById('doctor').value;
+  const date = document.getElementById('date').value;
+
+  const db = window.firebaseDB;
+  const appointmentsRef = window.firebaseRef(db, 'appointments');
+
+  const newAppointment = {
+    name,
+    phone,
+    doctor,
+    date,
+    timestamp: Date.now(),
+    status: 'waiting'
+  };
+
+  await window.firebasePush(appointmentsRef, newAppointment);
+
+  document.getElementById('confirmation').innerHTML = `
+    Appointment booked successfully!<br>
+    <a href="tracker.html" class="track-link">👉 Track Your Queue</a>
+  `;
+  document.getElementById('confirmation').classList.remove('hidden');
+  document.getElementById('bookingForm').reset();
+});
+
+let refreshInterval;
+
+async function trackQueue(auto = false) {
+  const userPhone = document.getElementById('trackPhone').value;
+  if (!auto && !userPhone) {
+    alert('Please enter your phone number');
+    return;
+  }
+
+  const db = window.firebaseDB;
+  const snapshot = await window.firebaseGet(window.firebaseChild(window.firebaseRef(db), 'appointments'));
+
+  if (!snapshot.exists()) {
+    alert('No appointments found.');
+    return;
+  }
+
+  const appointments = [];
+  snapshot.forEach(child => {
+    appointments.push({ id: child.key, ...child.val() });
   });
 
-  function trackQueue() {
-    const phoneToTrack = document.getElementById("trackPhone").value.trim();
-  
-    const db = window.firebaseDB;
-    const ref = window.firebaseRef;
-    const dbRef = ref(db, "appointments");
-  
-    // Import get function from firebase
-    import("https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js").then(({ get, child }) => {
-      get(dbRef).then((snapshot) => {
-        const data = [];
-        snapshot.forEach(childSnap => {
-          data.push(childSnap.val());
-        });
-  
-        // Sort by timestamp
-        data.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-  
-        const index = data.findIndex(app => app.phone === phoneToTrack);
-        const resultDiv = document.getElementById("queueResult");
-  
-        if (index === -1) {
-          resultDiv.innerHTML = "<p style='color:red;'>No appointment found for this phone.</p>";
-        } else {
-          const ahead = index;
-          const waitTime = ahead * 5; // assume 5 mins per person
-          const currentServing = data[0]?.name || "Not started yet";
-  
-          resultDiv.innerHTML = `
-            <table border="1" style="width: 100%; text-align: center;">
-              <tr><th colspan="2">📋 Your Queue Details</th></tr>
-              <tr><td>Your Position</td><td>${index + 1}</td></tr>
-              <tr><td>People Ahead</td><td>${ahead}</td></tr>
-              <tr><td>Estimated Wait Time</td><td>${waitTime} minutes</td></tr>
-              <tr><td>Currently Being Served</td><td>${currentServing}</td></tr>
-            </table>
-          `;
-  
-          estimateTravelTime(); // Call ETA function
-        }
-      }).catch((error) => {
-        alert("Error fetching queue: " + error.message);
-      });
-    });
+  appointments.sort((a, b) => a.timestamp - b.timestamp);
+  const userIndex = appointments.findIndex(a => a.phone === userPhone);
+  if (userIndex === -1) {
+    alert('Phone number not found in queue.');
+    return;
   }
-  
 
-  function estimateTravelTime() {
-    const etaDiv = document.getElementById("etaFromLocation");
-  
-    if (!navigator.geolocation) {
-      etaDiv.innerText = "Geolocation not supported.";
-      return;
+  // Calculate avg consultation time
+  let defaultConsultTime = 5 * 60 * 1000;
+  let appointedTimes = [];
+
+  for (let i = 0; i < appointments.length; i++) {
+    const appt = appointments[i];
+    if (appt.status === 'appointed' && appt.startTime && appt.endTime) {
+      appointedTimes.push(appt.endTime - appt.startTime);
     }
-  
-    navigator.geolocation.getCurrentPosition((position) => {
+  }
+
+  let avgTime = appointedTimes.length > 0
+    ? appointedTimes.reduce((a, b) => a + b, 0) / appointedTimes.length
+    : defaultConsultTime;
+
+  const tbody = document.querySelector('#queueTable tbody');
+  tbody.innerHTML = '';
+
+  const start = Math.max(0, userIndex - 10);
+  const end = Math.min(appointments.length, userIndex + 11);
+
+  for (let i = start; i < end; i++) {
+    const a = appointments[i];
+    const isUser = i === userIndex;
+    const tr = document.createElement('tr');
+
+    const nameCell = `<td class="${!isUser ? 'blurred-text' : ''}">${a.name}</td>`;
+    const estTime = Math.ceil(avgTime * i / 60000);
+
+    tr.innerHTML = `
+      <td>${i + 1}</td>
+      ${nameCell}
+      <td>${a.doctor}</td>
+      <td>~${estTime} mins</td>
+    `;
+
+    if (a.status === 'appointed') {
+      tr.classList.add('appointed-row');
+    }
+
+    tbody.appendChild(tr);
+  }
+
+  document.getElementById('queueResult').classList.remove('hidden');
+
+  if (!auto && navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(position => {
       const lat = position.coords.latitude;
       const lng = position.coords.longitude;
-  
-      const hospitalAddress = "aiims delhi"; // Your hospital address
-      const apiKey = "AIzaSyCTsaQuspjMbLjPqITuSKLLHG-Bi2HOmNg"; // Replace with your own key
-      const distanceMatrixUrl = `https://maps.googleapis.com/maps/api/distancematrix/json?units=metric&origins=${lat},${lng}&destinations=${encodeURIComponent(hospitalAddress)}&key=${apiKey}`;
-  
-      const proxyURL = `https://api.allorigins.win/get?url=${encodeURIComponent(distanceMatrixUrl)}`;
-  
-      fetch(proxyURL)
-        .then(res => res.json())
-        .then(result => {
-          const response = JSON.parse(result.contents);
-  
-          if (response.rows && response.rows[0].elements[0].status === "OK") {
-            const duration = response.rows[0].elements[0].duration.text;
-            etaDiv.innerText = `🕒 Estimated travel time: ${duration}`;
-          } else {
-            etaDiv.innerText = "Could not estimate travel time.";
-          }
-        })
-        .catch(err => {
-          console.warn("CORS or API error:", err);
-          etaDiv.innerText = "Could not fetch ETA. Showing directions only.";
-        })
-        .finally(() => {
-          // Always show the Get Directions button
-          const mapsLink = `https://www.google.com/maps/dir/?api=1&origin=${lat},${lng}&destination=${encodeURIComponent(hospitalAddress)}`;
-          document.getElementById("getDirectionsBtn").onclick = () => {
-            window.open(mapsLink, "_blank");
-          };
-        });
-  
-    }, () => {
-      etaDiv.innerText = "Location permission denied.";
+
+      const hospitalLat = 26.2755;
+      const hospitalLng = 83.9557;
+
+      const distance = getDistanceFromLatLonInKm(lat, lng, hospitalLat, hospitalLng);
+      const travelTime = Math.round((distance / 30) * 60);
+
+      document.getElementById('etaFromLocation').textContent = `~${travelTime} mins`;
+
+      const mapsURL = `https://www.google.com/maps/dir/?api=1&destination=${hospitalLat},${hospitalLng}`;
+      document.getElementById('getDirectionsBtn').onclick = () => {
+        window.open(mapsURL, '_blank');
+      };
     });
   }
-  
-  
-  
+
+  if (!refreshInterval) {
+    refreshInterval = setInterval(() => trackQueue(true), 10000);
+  }
+}
+
+function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = deg2rad(lat2 - lat1);
+  const dLon = deg2rad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+    Math.sin(dLon / 2) ** 2;
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+function deg2rad(deg) {
+  return deg * (Math.PI / 180);
+}
