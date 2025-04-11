@@ -21,6 +21,19 @@ document.getElementById('bookingForm').addEventListener('submit', async function
 
   await window.firebasePush(appointmentsRef, newAppointment);
 
+  // ✅ Only generate invoice after booking
+  const formData = {
+    name,
+    phone,
+    doctor,
+    date,
+    fee: "200",
+    paid: false,
+    trackingLink: `https://yourdomain.com/track.html?phone=${phone}`
+  };
+
+  generateAndDownloadPDF(formData); // generates + downloads invoice
+
   document.getElementById('confirmation').innerHTML = `
     Appointment booked successfully!<br>
     <a href="tracker.html" class="track-link">👉 Track Your Queue</a>
@@ -29,6 +42,67 @@ document.getElementById('bookingForm').addEventListener('submit', async function
   document.getElementById('bookingForm').reset();
 });
 
+// ✅ PDF Generator
+async function generateAndDownloadPDF(data) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+
+  doc.setFontSize(16);
+  doc.text("🩺 SmartQueue Hospital", 20, 20);
+  doc.setFontSize(10);
+  doc.text("Address: 123 Health St, Salempur, UP", 20, 26);
+  doc.text("Contact: +91-1234567890 | GST: 29ABCDE1234F2Z5", 20, 32);
+
+  doc.setFontSize(14);
+  doc.text("🧾 Appointment Invoice", 20, 45);
+
+  doc.setFontSize(12);
+  doc.text(`Name: ${data.name}`, 20, 55);
+  doc.text(`Phone: ${data.phone}`, 20, 62);
+  doc.text(`Doctor: ${data.doctor}`, 20, 69);
+  doc.text(`Date: ${data.date}`, 20, 76);
+
+  doc.text("--------------------------------------------------", 20, 82);
+  doc.text("Payment Details:", 20, 89);
+  doc.text(`Fee: ₹${data.fee}`, 20, 96);
+  doc.text(`Status: ${data.paid ? "Paid ✅" : "To be Paid ❌"}`, 20, 103);
+
+  doc.text("--------------------------------------------------", 20, 109);
+  doc.text("Track Appointment:", 20, 116);
+  doc.text(data.trackingLink, 20, 123);
+
+  doc.save("invoice.pdf");
+
+  return doc.output("blob"); // for WhatsApp upload later
+}
+async function uploadPDFToDrive(pdfBlob, filename) {
+  const reader = new FileReader();
+  return new Promise((resolve, reject) => {
+    reader.onloadend = async () => {
+      const base64Data = reader.result.split(',')[1];
+
+      try {
+        const response = await fetch('https://script.google.com/macros/s/AKfycbzSRg-nCbpNvMNTIrLsVwlIAnnbPT78s0Boj824CgQ9/dev', {
+          method: 'POST',
+          body: new URLSearchParams({
+            file: base64Data,
+            mimeType: 'application/pdf',
+            filename: filename
+          })
+        });        
+
+        const link = await response.text();
+        resolve(link);
+      } catch (err) {
+        console.error('Upload failed:', err);
+        reject(err);
+      }
+    };
+    reader.readAsDataURL(pdfBlob);
+  });
+}
+
+// ✅ Queue Tracker
 function trackQueue(auto = false) {
   const userPhone = document.getElementById('trackPhone')?.value;
   if (!auto && !userPhone) {
@@ -56,7 +130,6 @@ function trackQueue(auto = false) {
         return;
       }
 
-      // Calculate avg consultation time
       let defaultConsultTime = 5 * 60 * 1000;
       let appointedTimes = appointments
         .filter(a => a.status === 'appointed' && a.startTime && a.endTime)
@@ -117,7 +190,6 @@ function trackQueue(auto = false) {
         });
       }
 
-      // Manage refresh interval safely using a static variable on the function
       if (!trackQueue.refreshInterval) {
         trackQueue.refreshInterval = setInterval(() => trackQueue(true), 10000);
       }
@@ -127,13 +199,11 @@ function trackQueue(auto = false) {
     });
 }
 
-// Reset on unload if needed
 window.addEventListener("beforeunload", () => {
   if (trackQueue.refreshInterval) {
     clearInterval(trackQueue.refreshInterval);
   }
 });
-
 
 function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
   const R = 6371;
